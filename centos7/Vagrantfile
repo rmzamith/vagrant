@@ -1,0 +1,18 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure("2") do |config|
+
+  config.vm.box = "centos/7"
+
+  config.vm.provider "virtualbox" do |vb|  
+    vb.name = "centos7 terraform"
+    vb.memory = 8192
+    vb.cpus = 4
+    vb.customize ["modifyvm", :id, "--cpuexecutioncap", "50"]
+  end
+
+  config.vm.synced_folder ".\\vagrant_shared", "/var/vagrant_shared", :mount_options => ["dmode=777","fmode=666"]
+
+  config.vm.provision "shell", path: ".\\scripts\\bootstrap.sh"
+end
