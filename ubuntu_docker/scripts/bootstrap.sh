@@ -4,6 +4,9 @@
 apt-get update
 apt-get upgrade
 
+#install git
+apt-get install git
+
 # install docker client
 DOCKER_REPO_FILE_PATH="/etc/apt/sources.list.d/docker.list"
 touch $DOCKER_REPO_FILE_PATH
