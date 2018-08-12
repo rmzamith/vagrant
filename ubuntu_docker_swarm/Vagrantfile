@@ -24,8 +24,9 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.provision "file", source: "./data/app/app.py", destination: "/home/vagrant/workspace/app.py"
   config.vm.provision "file", source: "./data/app/requirements.txt", destination: "/home/vagrant/workspace/requirements.txt"
   config.vm.provision "file", source: "./data/docker/Dockerfile", destination: "/home/vagrant/workspace/Dockerfile"
+  config.vm.provision "file", source: "./data/docker/docker-compose.yml", destination: "/home/vagrant/workspace/docker-compose.yml"
   config.vm.provision "shell", path: ".\\scripts\\bootstrap.sh"
   config.vm.provision "shell", path: ".\\scripts\\bootstrap_docker.sh"
   config.vm.provision "shell", path: ".\\scripts\\init_docker_app.sh"
-  
+
 end
