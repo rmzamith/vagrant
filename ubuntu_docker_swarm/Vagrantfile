@@ -9,24 +9,55 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   os = "ubuntu/trusty64"
   net_ip = "192.168.55"
 
-  config.vm.box = "ubuntu/trusty64"
+  config.vm.define :manager, primary: true do |manager_config|
+    manager_config.vm.provider "virtualbox" do |vb|
+        vb.memory = "2048"
+        vb.cpus = 2
+        vb.name = "swarm_manager"
+        vb.customize ["modifyvm", :id, "--cpuexecutioncap", "50"]
+    end
+    manager_config.vm.box = "#{os}"
+    manager_config.vm.host_name = 'manager'
+    manager_config.vm.network "private_network", ip: "#{net_ip}.10"
+    manager_config.vm.network "forwarded_port", guest: 4000, host: 4000
 
-  config.disksize.size = "#{os}"
-  config.vm.provider "virtualbox" do |vb|  
-    vb.name = "ubuntu docker"
-    vb.memory = 8192
-    vb.cpus = 2
-    vb.customize ["modifyvm", :id, "--cpuexecutioncap", "50"]
+    config.vm.synced_folder ".\\swarm_shared", "/var/swarm_shared", :mount_options => ["dmode=777","fmode=666"]
+
+    manager_config.vm.provision "file", source: "./data/docker/docker-compose.yml", destination: "/home/vagrant/workspace/docker-compose.yml"
+    manager_config.vm.provision "file", source: "./scripts/docker_swarm_start.sh", destination: "/home/vagrant/workspace/docker_swarm_start.sh"
+    manager_config.vm.provision "shell", path: ".\\scripts\\bootstrap.sh"
+    manager_config.vm.provision "shell", path: ".\\scripts\\bootstrap_docker.sh"
+    manager_config.vm.provision "shell" do |s|
+      s.path = ".\\scripts\\init_docker_manager.sh"
+      s.args   = "#{net_ip}.10"
+    end
   end
 
-  config.vm.network "forwarded_port", guest: 4000, host: 4000
+  [
+    ["worker1",    "#{net_ip}.11",    "2048",    os, 4001 ],
+    ["worker2",    "#{net_ip}.12",    "2048",    os, 4002 ],
+  ].each do |vmname,ip,mem,os, port|
+    config.vm.define "#{vmname}" do |worker_config|
+      worker_config.vm.provider "virtualbox" do |vb|
+          vb.memory = "#{mem}"
+          vb.cpus = 2
+          vb.name = "swarm_#{vmname}"
+          vb.customize ["modifyvm", :id, "--cpuexecutioncap", "50"]
+      end
+      worker_config.vm.box = "#{os}"
+      worker_config.vm.hostname = "#{vmname}"
+      worker_config.vm.network "private_network", ip: "#{ip}"
+      worker_config.vm.network "forwarded_port", guest: 4000, host: "#{port}"
 
-  config.vm.provision "file", source: "./data/app/app.py", destination: "/home/vagrant/workspace/app.py"
-  config.vm.provision "file", source: "./data/app/requirements.txt", destination: "/home/vagrant/workspace/requirements.txt"
-  config.vm.provision "file", source: "./data/docker/Dockerfile", destination: "/home/vagrant/workspace/Dockerfile"
-  config.vm.provision "file", source: "./data/docker/docker-compose.yml", destination: "/home/vagrant/workspace/docker-compose.yml"
-  config.vm.provision "shell", path: ".\\scripts\\bootstrap.sh"
-  config.vm.provision "shell", path: ".\\scripts\\bootstrap_docker.sh"
-  config.vm.provision "shell", path: ".\\scripts\\init_docker_app.sh"
+      config.vm.synced_folder ".\\swarm_shared", "/var/swarm_shared", :mount_options => ["dmode=777","fmode=666"]
+
+      worker_config.vm.provision "shell", path: ".\\scripts\\bootstrap.sh"
+      worker_config.vm.provision "shell", path: ".\\scripts\\bootstrap_docker.sh"
+      worker_config.vm.provision "shell" do |s|
+        s.path = ".\\scripts\\init_docker_worker.sh"
+        s.args   = "#{vmname}"
+      end
+    end
+  end
 
 end
